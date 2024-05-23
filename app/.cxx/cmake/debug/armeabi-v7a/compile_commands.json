@@ -1,0 +1,12 @@
+[
+  {
+    "directory": "F:/Project/MediaCodecDemo/app/.cxx/cmake/debug/armeabi-v7a",
+    "command": "D:\\Android\\SDK\\ndk\\21.1.6352462\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=armv7-none-linux-androideabi23 --gcc-toolchain=D:/Android/SDK/ndk/21.1.6352462/toolchains/llvm/prebuilt/windows-x86_64 --sysroot=D:/Android/SDK/ndk/21.1.6352462/toolchains/llvm/prebuilt/windows-x86_64/sysroot  -Dyuv_render_lib_EXPORTS  -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -std=c++11 -frtti -fexceptions -O0 -fno-limit-debug-info  -fPIC   -o CMakeFiles\\yuv_render-lib.dir\\yuvRender.cpp.o -c F:\\Project\\MediaCodecDemo\\app\\src\\main\\cpp\\yuvRender.cpp",
+    "file": "F:\\Project\\MediaCodecDemo\\app\\src\\main\\cpp\\yuvRender.cpp"
+  },
+  {
+    "directory": "F:/Project/MediaCodecDemo/app/.cxx/cmake/debug/armeabi-v7a",
+    "command": "D:\\Android\\SDK\\ndk\\21.1.6352462\\toolchains\\llvm\\prebuilt\\windows-x86_64\\bin\\clang++.exe --target=armv7-none-linux-androideabi23 --gcc-toolchain=D:/Android/SDK/ndk/21.1.6352462/toolchains/llvm/prebuilt/windows-x86_64 --sysroot=D:/Android/SDK/ndk/21.1.6352462/toolchains/llvm/prebuilt/windows-x86_64/sysroot  -Dyuv_render_lib_EXPORTS  -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -march=armv7-a -mthumb -Wformat -Werror=format-security  -std=c++11 -frtti -fexceptions -O0 -fno-limit-debug-info  -fPIC   -o CMakeFiles\\yuv_render-lib.dir\\OpenGLRender.cpp.o -c F:\\Project\\MediaCodecDemo\\app\\src\\main\\cpp\\OpenGLRender.cpp",
+    "file": "F:\\Project\\MediaCodecDemo\\app\\src\\main\\cpp\\OpenGLRender.cpp"
+  }
+]

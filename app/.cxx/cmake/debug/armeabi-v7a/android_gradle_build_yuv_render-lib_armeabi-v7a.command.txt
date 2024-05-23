@@ -1,0 +1,7 @@
+Executable : D:\Android\SDK\cmake\3.10.2.4988404\bin\ninja.exe
+arguments : 
+-C
+F:\Project\MediaCodecDemo\app\.cxx\cmake\debug\armeabi-v7a
+yuv_render-lib
+jvmArgs : 
+
