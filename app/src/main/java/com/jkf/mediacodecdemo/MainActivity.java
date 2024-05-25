@@ -17,6 +17,7 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
+    @SuppressLint("CheckResult")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -37,45 +38,12 @@ public class MainActivity extends AppCompatActivity {
                         //权限获取失败，而且被永久拒绝
                     }
                 });
-        chooseVideoEncoder();
 
         try {
-            MediaCodec mediaCodec = MediaCodec.createDecoderByType("video/hevc");
-
-            Log.d("hjyyy", "mediaCodec: " + mediaCodec.getName());
+            MediaCodec mediaCodec = MediaCodec.createDecoderByType("video/avc");
+            Log.d("xzc", "mediaCodec: " + mediaCodec.getName());
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-
-    private MediaCodecInfo chooseVideoEncoder() {
-        int nbCodecs = MediaCodecList.getCodecCount();
-        for (int i = 0; i < nbCodecs; i++) {
-            MediaCodecInfo mci = MediaCodecList.getCodecInfoAt(i);
-
-            String[] types = mci.getSupportedTypes();
-            for (int j = 0; j < types.length; j++) {
-                if (mci.getName().contains("avc")) {
-                    Log.i("hjyyy", String.format("vencoder %s types: %s", mci.getName(), types[j]));
-                }
-
-                String[] supportedTypes = mci.getSupportedTypes();
-                for (String type : supportedTypes) {
-                    MediaCodecInfo.CodecCapabilities capabilities = mci.getCapabilitiesForType(type);
-
-                    int[] colorFormats = capabilities.colorFormats;
-                    if (colorFormats.length > 0) {
-                        Log.d("hjyyy", "Supported color formats:");
-                        for (int format : colorFormats) {
-                            Log.d("hjyyy", "  " + format);
-                        }
-                    } else {
-                        Log.d("hjyyy", "No supported color formats");
-                    }
-                }
-            }
-        }
-        return null;
     }
 }

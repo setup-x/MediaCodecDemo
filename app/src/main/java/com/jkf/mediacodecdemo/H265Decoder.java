@@ -9,10 +9,13 @@ import android.media.MediaCodec;
 import android.media.MediaCodec.BufferInfo;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
 import android.view.Surface;
+
+import androidx.annotation.RequiresApi;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -28,6 +31,7 @@ public class H265Decoder {
     private static final String MIME_TYPE = "video/avc";
     private static final int TIMEOUT_US = 10000;
 
+    private static final String TAG = "H265Decoder";
     private MediaCodec mediaCodec;
     private Surface surface;
     private HandlerThread decoderThread;
@@ -54,17 +58,13 @@ public class H265Decoder {
         decoderHandler = new Handler(decoderThread.getLooper());
 
         decoderHandler.post(new Runnable() {
+            @RequiresApi(api = Build.VERSION_CODES.Q)
             @Override
             public void run() {
                 try {
                     initDecoder();
                     decodeRawH265Stream(filePath);
-                    if (videoFramePull != null) {
-                        videoFramePull.join(500);
-                        videoFramePull = null;
-                    }
-                    release();
-                } catch (IOException | InterruptedException e) {
+                } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
                     isVideoSizeSet = false;
@@ -73,15 +73,68 @@ public class H265Decoder {
         });
     }
 
+
+    public void stop() {
+        dequeueRunning = false;
+
+        try {
+            if (videoFramePull != null) {
+                videoFramePull.join(500);
+            }
+
+            if (decoderThread != null) {
+                decoderThread.quitSafely();
+                decoderHandler = null;
+            }
+
+            if (mediaCodec != null) {
+                mediaCodec.stop();
+                mediaCodec.release();
+            }
+
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            videoFramePull = null;
+            decoderThread = null;
+            mediaCodec = null;
+        }
+        Log.d(TAG, "stop. ");
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.Q)
     private void initDecoder() throws IOException {
+        int width = 1920;
+        int height = 1080;
+
+        // 创建解码器
         mediaCodec = MediaCodec.createDecoderByType(MIME_TYPE);
-        MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, 1920, 1080);
-        format.setInteger(MediaFormat.KEY_FRAME_RATE, 30);
+
+        // 创建并配置媒体格式
+        MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, width, height);
+
+        // 计算最大输入大小
+        int maxInputSize = calculateMaxInputSize(MIME_TYPE, width, height);
+        format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, maxInputSize);
+
+        // 配置解码器
         mediaCodec.configure(format, surface, null, 0);
+
+        // 检查实际的缓冲区大小
+        MediaFormat outputFormat = mediaCodec.getOutputFormat();
+        int actualMaxInputSize = outputFormat.getInteger(MediaFormat.KEY_MAX_INPUT_SIZE, maxInputSize);
+
+        Log.d(TAG, "Requested max input size: " + maxInputSize);
+        Log.d(TAG, "Actual max input size: " + actualMaxInputSize);
+
+        // 启动解码器
         mediaCodec.start();
+
+        // 启动视频帧提取线程
         videoFramePull = new VideoFramePull();
         videoFramePull.start();
     }
+
 
     private void decodeRawH265Stream(String filePath) throws IOException {
         try {
@@ -94,14 +147,9 @@ public class H265Decoder {
             int startIndex = 0;
             //h264总字节数
             int totalSize = bytes.length;
-            int kk = 0;
-            boolean hasVps = false, hasSps = false, hasPps = false;
-
-            int count = 0;
-            int count2 = 0;
 
             //3、解析
-            while (true) {
+            while (dequeueRunning) {
                 //判断是否符合
                 if (totalSize == 0 || startIndex >= totalSize) {
                     break;
@@ -111,7 +159,7 @@ public class H265Decoder {
                 if (nextFrameStart == -1) break;
 
                 // 查询10000毫秒后，如果dSP芯片的buffer全部被占用，返回-1；存在则大于0
-                int inIndex = mediaCodec.dequeueInputBuffer(200 * 1000);
+                int inIndex = mediaCodec.dequeueInputBuffer(TIMEOUT_US);
                 if (inIndex >= 0) {
                     //根据返回的index拿到可以用的buffer
                     ByteBuffer byteBuffer = inputBuffers[inIndex];
@@ -122,7 +170,7 @@ public class H265Decoder {
                     //填充数据后通知mediacodec查询inIndex索引的这个buffer,
                     mediaCodec.queueInputBuffer(inIndex, 0, nextFrameStart - startIndex, 0, 0);
                 } else {
-                    Log.d("xzc", "dequeueInputBuffer fail. ");
+                    Log.d(TAG, "dequeueInputBuffer fail. ");
                     mediaCodec.flush();
                 }
 
@@ -145,19 +193,6 @@ public class H265Decoder {
 
     }
 
-    private void release() {
-        if (mediaCodec != null) {
-            mediaCodec.stop();
-            mediaCodec.release();
-            mediaCodec = null;
-        }
-
-        if (decoderThread != null) {
-            decoderThread.quitSafely();
-            decoderThread = null;
-            decoderHandler = null;
-        }
-    }
 
     //读取一帧数据
     private int findByFrame(byte[] bytes, int start, int totalSize) {
@@ -238,11 +273,11 @@ public class H265Decoder {
             while (dequeueRunning && mediaCodec != null) {
                 MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
                 try {
-                    int outIndex = mediaCodec.dequeueOutputBuffer(info, 100 * 1000);
+                    int outIndex = mediaCodec.dequeueOutputBuffer(info, TIMEOUT_US * 20);
                     if (outIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                        Log.d("xzc", "MediaCodec.INFO_TRY_AGAIN_LATER. ");
+                        Log.d(TAG, "dequeueOutput timeout. ");
                     } else if (outIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-                        Log.d("xzc", "MediaCodec.INFO_OUTPUT_FORMAT_CHANGED. ");
+                        Log.d(TAG, "MediaCodec.INFO_OUTPUT_FORMAT_CHANGED. ");
                     } else if (outIndex >= 0) {
                         if (mediaCodec != null) {
                             if (!isVideoSizeSet) {
@@ -268,6 +303,21 @@ public class H265Decoder {
                 }
             }
         }
+    }
+
+    // 计算最大输入大小的方法
+    private int calculateMaxInputSize(String mimeType, int width, int height) {
+        int frameSize;
+        if ("video/avc".equals(mimeType)) { // 假设使用 YUV420 格式
+            frameSize = width * height * 3 / 2;
+        } else {
+            // 其他格式根据需要调整
+            frameSize = width * height * 4;
+        }
+
+        // 假设缓冲区最多处理 10 帧数据
+        int maxInputSize = frameSize * 10;
+        return maxInputSize;
     }
 
 }
